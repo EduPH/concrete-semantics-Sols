@@ -122,7 +122,7 @@ substitute first and evaluate afterwards or evaluate with an updated state:
 *}
 
   
-lemma subst_lemma: "aval (subst x a e) s = aval e (s(x := aval a s))"
+lemma subst_lemma[simp]: "aval (subst x a e) s = aval e (s(x := aval a s))"
   apply (induction e)
   apply auto  
   done
@@ -131,7 +131,7 @@ text {*
 As a consequence prove that we can substitute equal expressions by equal expressions
 and obtain the same result under evaluation:
 *}
-lemma "aval a1 s = aval a2 s
+lemma [simp]:"aval a1 s = aval a2 s
   \<Longrightarrow> aval (subst x a1 e) s = aval (subst x a2 e) s"
   apply (induction e)
   apply auto
@@ -217,8 +217,23 @@ division by changing the return type of @{text aval2} to
 return @{const None}. Division on @{typ int} is the infix @{text div}.
 *}
 
+datatype aexp2 = N2 int | V2 vname | Plus2 aexp2 aexp2 | PostInc vname 
+                        |  Times2 aexp2 aexp2 | Div2 aexp2 aexp2 
+fun aval2 :: "aexp2 \<Rightarrow> state \<Rightarrow> (val \<times> state)" where
+  "aval2 (N2 a) s = (a,s)" |
+  "aval2 (V2 x) s = (s x,s)" |
+  "aval2 (Plus2 a b) s = (fst (aval2 a s) + fst (aval2 b s), (\<lambda> x. (snd (aval2 a s) x) 
+  + (snd (aval2 b s) x) - (s x)))" |
+  "aval2 (PostInc x) s = (s x, s(x:= 1 + s x))" |
+  "aval2 (Times2 a b) s = (fst (aval2 a s) * fst (aval2 b s),(\<lambda> x. (snd (aval2 a s) x) 
+  + (snd (aval2 b s) x) - (s x)))" |  
+  "aval2 (Div2 a b) s = (fst (aval2 a s) div fst (aval2 b s),(\<lambda> x. (snd (aval2 a s) x) 
+  + (snd (aval2 b s) x) - (s x)))"
   
   
+value "aval2 (Div2 (N2 9) (N2 3))  (\<lambda> x. 0) "
+value "aval2 (PostInc u)  (\<lambda> x. 0) "
+
   
 text{*
 \endexercise
@@ -226,42 +241,62 @@ text{*
 The following type adds a @{text LET} construct to arithmetic expressions:
 *}
 
-datatype lexp = Nl int | Vl vname | Plusl lexp lexp | LET vname lexp lexp
-
+datatype lexp = Nl int | Vl vname | Plusl lexp lexp | LET vname lexp lexp   
+          
 text{* The @{const LET} constructor introduces a local variable:
 the value of @{term "LET x e\<^sub>1 e\<^sub>2"} is the value of @{text e\<^sub>2}
 in the state where @{text x} is bound to the value of @{text e\<^sub>1} in the original state.
 Define a function @{const lval} @{text"::"} @{typ "lexp \<Rightarrow> state \<Rightarrow> int"}
 that evaluates @{typ lexp} expressions. Remember @{term"s(x := i)"}.
-
 Define a conversion @{const inline} @{text"::"} @{typ "lexp \<Rightarrow> aexp"}.
 The expression \mbox{@{term "LET x e\<^sub>1 e\<^sub>2"}} is inlined by substituting
 the converted form of @{text e\<^sub>1} for @{text x} in the converted form of @{text e\<^sub>2}.
 See Exercise~\ref{exe:subst} for more on substitution.
 Prove that @{const inline} is correct w.r.t.\ evaluation.
-\endexercise
+\endexercise*}
 
-
+fun lval :: "lexp \<Rightarrow> state \<Rightarrow> int"  where
+ "lval (Nl a) s = a" |
+ "lval (Vl x) s = s x" |
+ "lval (Plusl a b) s = lval a s + lval b s" |
+ "lval (LET x e1 e2) s = lval e2 (s(x:= lval e1 s))"
+ 
+fun inline :: "lexp \<Rightarrow> aexp" where
+ "inline (Nl a) = N a" |
+ "inline (Vl x) = V x" |
+ "inline (Plusl a b) = Plus (inline a) (inline b)" |
+ "inline (LET x e1 e2) = subst x (inline e1) (inline e2)"
+  
+    
+lemma "aval (inline e) s = lval e s"
+  apply (induction e arbitrary: s)
+  apply auto    
+  done  
+     
+text{*
 \exercise
 Show that equality and less-or-equal tests on @{text aexp} are definable
 *}
 
 definition Le :: "aexp \<Rightarrow> aexp \<Rightarrow> bexp" where
-(* your definition/proof here *)
-
+  "Le a b = Not (Less b a)"
+  
 definition Eq :: "aexp \<Rightarrow> aexp \<Rightarrow> bexp" where
-(* your definition/proof here *)
-
+  "Eq a b = And (Not (Less a b)) (Not (Less b a))"
+  
+  
 text{*
 and prove that they do what they are supposed to:
 *}
 
-lemma bval_Le: "bval (Le a1 a2) s = (aval a1 s \<le> aval a2 s)"
-(* your definition/proof here *)
-
 lemma bval_Eq: "bval (Eq a1 a2) s = (aval a1 s = aval a2 s)"
-(* your definition/proof here *)
+  apply (auto simp add: Eq_def)
+  done  
 
+lemma bval_Le: "bval (Le a1 a2) s = (aval a1 s \<le> aval a2 s)"
+  apply (auto simp add: Le_def)
+  done  
+  
 text{*
 \endexercise
 
@@ -273,24 +308,37 @@ datatype ifexp = Bc2 bool | If ifexp ifexp ifexp | Less2 aexp aexp
 text {*  First define an evaluation function analogously to @{const bval}: *}
 
 fun ifval :: "ifexp \<Rightarrow> state \<Rightarrow> bool" where
-(* your definition/proof here *)
+  "ifval (Bc2 b) s = b" |
+  "ifval (If e1 e2 e3) s = (if (ifval e1 s) then (ifval e2 s) else (ifval e3 s))" |
+  "ifval (Less2 e1 e2) s = (aval e1 s < aval e2 s)"
 
 text{* Then define two translation functions *}
 
 fun b2ifexp :: "bexp \<Rightarrow> ifexp" where
-(* your definition/proof here *)
+  "b2ifexp (Bc b) = Bc2 b" |
+  "b2ifexp (Not e) = If (b2ifexp e) (Bc2 False) (Bc2 True)" |
+  "b2ifexp (And e1 e2) = If (b2ifexp e1) (b2ifexp e2) (Bc2 False)" |
+  "b2ifexp (Less e1 e2) = (Less2 e1 e2)"
 
 fun if2bexp :: "ifexp \<Rightarrow> bexp" where
-(* your definition/proof here *)
+  "if2bexp (Bc2 b) = Bc b" |
+  "if2bexp (If e1 e2 e3) = And (Not (And (if2bexp e1) (Not (if2bexp e2)))) 
+                            (Not (And (Not (if2bexp e1)) (Not (if2bexp e3))))" |
+  "if2bexp (Less2 e1 e2) = Less e1 e2"
 
 text{* and prove their correctness: *}
 
 lemma "bval (if2bexp exp) s = ifval exp s"
-(* your definition/proof here *)
+  apply (induction exp)
+  apply auto
+  done  
 
 lemma "ifval (b2ifexp exp) s = bval exp s"
-(* your definition/proof here *)
-
+  apply (induction exp)
+  apply auto
+  done  
+  
+  
 text{*
 \endexercise
 
@@ -317,25 +365,44 @@ text {* Define a function that checks whether a boolean exression is in NNF
 to @{const VAR}s: *}
 
 fun is_nnf :: "pbexp \<Rightarrow> bool" where
-(* your definition/proof here *)
-
+ "is_nnf (VAR x) = True" | 
+ "is_nnf (NOT (VAR x)) = True" |
+ "is_nnf (NOT e) = False" |
+ "is_nnf (AND e1 e2) = (is_nnf e1 \<and> is_nnf e2)" |
+ "is_nnf (OR e1 e2) = (is_nnf e1 \<and> is_nnf e2)"
+ 
 text{*
 Now define a function that converts a @{text bexp} into NNF by pushing
 @{const NOT} inwards as much as possible:
 *}
 
 fun nnf :: "pbexp \<Rightarrow> pbexp" where
-(* your definition/proof here *)
+  "nnf (VAR x) = VAR x" |
+  "nnf (NOT (VAR x)) = NOT (VAR x)" |
+  "nnf (NOT (NOT e)) = nnf e" |
+  "nnf (AND e1 e2) = AND (nnf e1) (nnf e2)" |
+  "nnf (OR e1 e2) = OR (nnf e1) (nnf e2)" |
+  "nnf (NOT (AND e1 e2)) = OR (nnf (NOT e1)) (nnf (NOT e2))" |
+  "nnf (NOT (OR e1 e2)) = AND (nnf (NOT e1)) (nnf (NOT e2))"
 
 text{*
 Prove that @{const nnf} does what it is supposed to do:
 *}
 
-lemma pbval_nnf: "pbval (nnf b) s = pbval b s"
-(* your definition/proof here *)
-
-lemma is_nnf_nnf: "is_nnf (nnf b)"
-(* your definition/proof here *)
+lemma neg_aux [simp] : "pbval (nnf (NOT e)) s = (\<not> (pbval (nnf e) s))"
+  apply (induction e)
+  apply auto  
+  done
+  
+lemma pbval_nnf: "pbval (nnf e) s = pbval e s"
+  apply (induction e)
+  apply auto  
+  done  
+  
+lemma is_nnf_nnf: "is_nnf (nnf e)"
+  apply (induction e rule: nnf.induct )
+  apply auto
+  done  
 
 text{*
 An expression is in DNF (disjunctive normal form) if it is in NNF
@@ -343,8 +410,17 @@ and if no @{const OR} occurs below an @{const AND}. Define a corresponding
 test:
 *}
 
+fun not_OR :: "pbexp \<Rightarrow> bool" where
+  "not_OR (OR e1 e2) = False" |
+  "not_OR (AND e1 e2) = (not_OR e1 \<and> not_OR e2)" |
+  "not_OR e = True"
+  
+  
 fun is_dnf :: "pbexp \<Rightarrow> bool" where
-(* your definition/proof here *)
+  "is_dnf (VAR x) = True" |
+  "is_dnf (NOT e) = True" |
+  "is_dnf (AND e1 e2) = ((not_OR e1) \<and> (not_OR e2))" |
+  "is_dnf (OR e1 e2) = ((is_dnf e1) \<and> (is_dnf e2))"
 
 text {*
 An NNF can be converted into a DNF in a bottom-up manner.

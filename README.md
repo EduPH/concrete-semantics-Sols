@@ -1,5 +1,8 @@
 # concrete-semantics-Sols
-My solutions to [concrete semantics](http://www.concrete-semantics.org) by Tobias Nipkow and Gerwin Klein. 
+My solutions to [concrete
+semantics](http://www.concrete-semantics.org) by Tobias Nipkow and
+Gerwin Klein. To see a list of
+[exercises](http://www.concrete-semantics.org/Exercises/exercises.pdf). 
 
 ## Already done:
 + [Chapter 2](https://github.com/EduPH/concrete-semantics-Sols/blob/master/Chapter2.thy)
