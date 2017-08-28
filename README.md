@@ -6,6 +6,7 @@ Gerwin Klein. To see a list of
 
 ## Already done:
 + [Chapter 2](https://github.com/EduPH/concrete-semantics-Sols/blob/master/Chapter2.thy)
++ [Chapter 3](https://github.com/EduPH/concrete-semantics-Sols/blob/master/Chapter3.thy) 
 
 ## In process: 
-+ [Chapter 3](https://github.com/EduPH/concrete-semantics-Sols/blob/master/Chapter3.thy) 
+
