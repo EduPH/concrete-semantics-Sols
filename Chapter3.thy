@@ -495,6 +495,46 @@ accordingly.
 Hint: you may find @{text"split: option.split"} useful in your proofs.
 *}
 
+datatype instr' = LOADI val | LOAD vname | ADD
+
+type_synonym stack = "val list"
+
+abbreviation hd2 where 
+"hd2 xs \<equiv> hd (tl xs)"
+
+abbreviation tl2 where 
+"tl2 xs \<equiv> tl (tl xs)"
+
+fun exec1' :: "instr' \<Rightarrow> state \<Rightarrow> stack \<Rightarrow> stack option" where
+"exec1' (LOADI n) _ stk = Some (n # stk)" |
+"exec1' (LOAD x) s stk = Some (s(x) # stk)" |
+"exec1' ADD _ stk = 
+ (case stk of 
+  (x # y # xs) \<Rightarrow> Some ((hd2 stk + hd stk) # tl2 stk) |
+  (xs) \<Rightarrow> None)"
+
+fun exec' :: "instr' list \<Rightarrow> state \<Rightarrow> stack \<Rightarrow> stack option" where
+"exec' [] _ stk = Some stk" |
+"exec' (i#is) s stk = 
+ (case (exec1' i s stk) of 
+  Some res \<Rightarrow> exec' is s res |
+  None \<Rightarrow> None)"
+
+fun comp :: "aexp \<Rightarrow> instr' list" where
+"comp (N n) = [LOADI n]" |
+"comp (V x) = [LOAD x]" |
+"comp (Plus e1 e2) = comp e1 @ comp e2 @ [ADD]"
+
+lemma exec_append: "exec' is1 s stk = Some new_stk \<Longrightarrow> exec' (is1 @ is2) s stk = exec' is2 s new_stk"
+apply (induction is1 arbitrary:stk)
+apply (auto split:option.split)
+done
+
+lemma "exec' (comp a) s stk = Some (aval a s # stk)"
+apply (induction a arbitrary:stk)
+apply (auto simp add: exec_append)
+done  
+  
 text{*
 \endexercise
 
@@ -524,7 +564,6 @@ fun exec1 :: "instr \<Rightarrow> state \<Rightarrow> rstate \<Rightarrow> rstat
   "exec1 (ADD r1 r2) s rs = rs(r1:= (rs r1) + (rs r2))"
 
 
-  
 text{*
 Define the execution @{const[source] exec} of a list of instructions as for the stack machine.
 
@@ -534,10 +573,32 @@ into @{text r}. The registers @{text "> r"} should be used in a stack-like fashi
 for intermediate results, the ones @{text "< r"} should be left alone.
 Define the compiler and prove it correct:
 *}
+  
+fun exec :: "instr list \<Rightarrow> state \<Rightarrow> rstate \<Rightarrow> rstate" where
+  "exec [] s rs = rs" |
+  "exec (x # xs) s rs = exec xs s (exec1 x s rs)" 
+  
+fun comp' :: "aexp \<Rightarrow> reg \<Rightarrow> instr list" where
+  "comp' (N n) r = [LDI n r]" |
+  "comp' (V x) r = [LD x r]" |
+  "comp' (Plus e1 e2) r = (comp' e1 r) @ (comp' e2 (r+1)) @ [ADD r (r+1)]" 
 
-theorem "exec (comp a r) s rs r = aval a s"
-(* your definition/proof here *)
 
+lemma [simp]: "exec (xs @ ys) s rs = exec ys s (exec xs s rs)"
+apply (induction xs arbitrary: rs)
+apply (auto)
+done
+lemma [simp]:"r < q \<Longrightarrow> exec (comp' a q) s rs r = rs r"
+  apply (induction a arbitrary: rs r q)
+  apply (auto)
+  done  
+
+theorem "exec (comp' a r) s rs r = aval a s"
+  apply (induction a arbitrary: rs r)
+  apply auto  
+  done
+    
+    
 text{*
 \endexercise
 
@@ -557,7 +618,11 @@ adds the value in register @{text r} to the value in register 0;
 *}
 
 fun exec01 :: "instr0 \<Rightarrow> state \<Rightarrow> rstate \<Rightarrow> rstate" where
-(* your definition/proof here *)
+"exec01 (LDI0 n) s rs = rs(0:=n)" |
+"exec01 (LD0 v) s rs = rs(0:=(s v))" |
+"exec01 (MV0 r) s rs = rs(r:=(rs 0))" |
+"exec01 (ADD0 r) s rs = rs(0:=(rs 0)+(rs r))"
+
 
 text{*
 and @{const exec0} for instruction lists.
@@ -569,9 +634,32 @@ for intermediate results, the ones @{text "\<le> r"} should be left alone
 (with the exception of 0). Define the compiler and prove it correct:
 *}
 
-theorem "exec0 (comp0 a r) s rs 0 = aval a s"
-(* your definition/proof here *)
+fun exec0 :: "instr0 list \<Rightarrow> state \<Rightarrow> rstate \<Rightarrow> rstate" where  
+"exec0 [] s rs = rs" |
+"exec0 (x # xs) s rs = exec0 xs s (exec01 x s rs)"
 
+
+fun comp0 :: "aexp \<Rightarrow> reg \<Rightarrow> instr0 list" where
+"comp0 (N n) r = [LDI0 n]" |
+"comp0 (V x) r = [LD0 x]" |
+"comp0 (Plus p q) r = (comp0 p (r+1)) @ [MV0 (r+1)] @ (comp0 q (r+2)) @ [ADD0 (r+1)]"
+
+
+lemma[simp]: "exec0 (xs @ ys) s rs = exec0 ys s (exec0 xs s rs)"
+  apply (induction xs arbitrary: rs)
+  apply (auto)
+  done
+
+lemma [simp]: "(0 < r) \<and> (r \<le> q) \<Longrightarrow> exec0 (comp0 a q) s rs r = rs r"
+  apply (induction a arbitrary: rs r q)
+  apply (auto)
+  done
+    
+theorem "exec0 (comp0 a r) s rs 0 = aval a s"
+  apply (induction a arbitrary: r rs)
+  apply auto  
+  done
+    
 text{*
 \endexercise
 *}
