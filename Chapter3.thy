@@ -433,31 +433,51 @@ we can express the distributivity step as follows:
 *}
 
 fun dist_AND :: "pbexp \<Rightarrow> pbexp \<Rightarrow> pbexp" where
-(* your definition/proof here *)
+  "dist_AND e (OR e1 e2) = OR (dist_AND e e1) (dist_AND e e2)" |
+  "dist_AND (OR e1 e2) e = OR (dist_AND e1 e) (dist_AND e2 e)" |
+  "dist_AND e1 e2 = AND e1 e2"
+
 
 text {* and prove that it behaves as follows: *}
 
-lemma pbval_dist: "pbval (dist_AND b1 b2) s = pbval (AND b1 b2) s"
-(* your definition/proof here *)
+lemma pbval_dist [simp]: "pbval (dist_AND b1 b2) s = pbval (AND b1 b2) s"
+  apply (induction b1 b2 rule: dist_AND.induct)
+  apply auto
+  done  
 
 lemma is_dnf_dist: "is_dnf b1 \<Longrightarrow> is_dnf b2 \<Longrightarrow> is_dnf (dist_AND b1 b2)"
-(* your definition/proof here *)
+  apply (induction b1 b2 rule:dist_AND.induct)
+  apply auto
+  done  
 
 text {* Use @{const dist_AND} to write a function that converts an NNF
   to a DNF in the above bottom-up manner.
 *}
 
 fun dnf_of_nnf :: "pbexp \<Rightarrow> pbexp" where
-(* your definition/proof here *)
-
+  "dnf_of_nnf (VAR x) = VAR x" |
+  "dnf_of_nnf (NOT e) = NOT e" |
+  "dnf_of_nnf (OR e1 e2) = OR (dnf_of_nnf e1) (dnf_of_nnf e2)" |
+  "dnf_of_nnf (AND e1 e2) = dist_AND (dnf_of_nnf e1) (dnf_of_nnf e2)"
+  
 text {* Prove the correctness of your function: *}
 
 lemma "pbval (dnf_of_nnf b) s = pbval b s"
-(* your definition/proof here *)
+  apply (induction b arbitrary: s)
+  apply (auto simp add:)
+  done
 
+    
+lemma [simp]: "is_dnf e1 \<Longrightarrow> is_dnf e2 \<Longrightarrow> is_dnf (dist_AND e1 e2)"
+  apply (induction e1 e2 rule: dist_AND.induct)
+  apply auto
+  done
+    
 lemma "is_nnf b \<Longrightarrow> is_dnf (dnf_of_nnf b)"
-(* your definition/proof here *)
-
+  apply (induction b rule: dnf_of_nnf.induct)
+  apply auto
+  done  
+    
 text{*
 \endexercise
 
@@ -482,9 +502,11 @@ text{*
 This exercise is about a register machine
 and compiler for @{typ aexp}. The machine instructions are
 *}
+
 type_synonym reg = nat
 datatype instr = LDI val reg | LD vname reg | ADD reg reg
 
+  
 text {*
 where type @{text reg} is a synonym for @{typ nat}.
 Instruction @{term "LDI i r"} loads @{text i} into register @{text r},
@@ -497,8 +519,12 @@ the result is the new register state: *}
 type_synonym rstate = "reg \<Rightarrow> val"
 
 fun exec1 :: "instr \<Rightarrow> state \<Rightarrow> rstate \<Rightarrow> rstate" where
-(* your definition/proof here *)
+  "exec1 (LDI n r) s rs = rs(r:=n)" |
+  "exec1 (LD x r) s rs = rs(r:= s(x))" |
+  "exec1 (ADD r1 r2) s rs = rs(r1:= (rs r1) + (rs r2))"
 
+
+  
 text{*
 Define the execution @{const[source] exec} of a list of instructions as for the stack machine.
 
