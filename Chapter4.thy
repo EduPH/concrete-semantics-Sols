@@ -25,11 +25,17 @@ the tests if a tree is ordered:
 *}
 
 fun set :: "'a tree \<Rightarrow> 'a set"  where
-(* your definition/proof here *)
+  "set Tip = {}" |
+  "set (Node t1 n t2) = {n}\<union>(set t1)\<union>(set t2)"
+
+value "set (Node (Node Tip 4 Tip) 7 (Node (Node Tip 7 Tip) (8::int) Tip))"  
 
 fun ord :: "int tree \<Rightarrow> bool"  where
-(* your definition/proof here *)
+  "ord Tip = True" |
+  "ord (Node t1 n t2) = ((\<forall>y \<in> set t1. n \<le> y)\<and>(\<forall> y \<in> set t2. n \<le> y)\<and> ord t1 \<and> ord t2)"  
 
+value "ord (Node (Node Tip 4 Tip) 3 (Node (Node Tip 7 Tip) (5::int) Tip))"
+  
 text{* Hint: use quantifiers.
 
 Define a function @{text ins} that inserts an element into an ordered @{typ "int tree"}
@@ -38,7 +44,7 @@ same tree should be returned.
 *}
 
 fun ins :: "int \<Rightarrow> int tree \<Rightarrow> int tree"  where
-(* your definition/proof here *)
+ 
 
 text{* Prove correctness of @{const ins}: *}
 
