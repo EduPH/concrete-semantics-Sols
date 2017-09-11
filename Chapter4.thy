@@ -32,9 +32,9 @@ value "set (Node (Node Tip 4 Tip) 7 (Node (Node Tip 7 Tip) (8::int) Tip))"
 
 fun ord :: "int tree \<Rightarrow> bool"  where
   "ord Tip = True" |
-  "ord (Node t1 n t2) = ((\<forall>y \<in> set t1. n \<le> y)\<and>(\<forall> y \<in> set t2. n \<le> y)\<and> ord t1 \<and> ord t2)"  
+  "ord (Node t1 n t2) = ((\<forall>y \<in> set t1. y \<le> n)\<and>(\<forall> y \<in> set t2. n \<le> y)\<and> ord t1 \<and> ord t2)"  
 
-value "ord (Node (Node Tip 4 Tip) 3 (Node (Node Tip 7 Tip) (5::int) Tip))"
+value "ord (Node (Node Tip 2 Tip) 3 (Node (Node Tip 4 Tip) (5::int) Tip))"
   
 text{* Hint: use quantifiers.
 
@@ -43,17 +43,29 @@ while maintaining the order of the tree. If the element is already in the tree, 
 same tree should be returned.
 *}
 
+  
 fun ins :: "int \<Rightarrow> int tree \<Rightarrow> int tree"  where
- 
+  "ins m Tip = Node Tip m Tip" |
+  "ins m (Node t1 n t2) =  (if m = n then Node t1 n t2    
+                            else if n > m then Node (ins m t1) n t2 
+                            else Node t1 n (ins m t2))"
 
+value "ins 5  (Node (Node Tip 2 Tip) 3 (Node (Node Tip 4 Tip) (6::int) Tip))"    
+value "ord(ins 5  (Node (Node Tip 2 Tip) 3 (Node (Node Tip 4 Tip) (6::int) Tip)))"  
+
+  
 text{* Prove correctness of @{const ins}: *}
 
-lemma set_ins: "set(ins x t) = {x} \<union> set t"
-(* your definition/proof here *)
-
+lemma set_ins[simp]: "set(ins x t) = {x} \<union> set t"
+  apply (induction t)
+  apply auto  
+  done  
+    
 theorem ord_ins: "ord t \<Longrightarrow> ord(ins i t)"
-(* your definition/proof here *)
-
+  apply (induction t arbitrary : i)
+  apply auto  
+  done
+    
 text{*
 \endexercise
 
