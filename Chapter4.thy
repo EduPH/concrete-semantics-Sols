@@ -131,14 +131,17 @@ all @{prop"i < n"}:
 *}
 
 inductive iter :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool" for r where
-(* your definition/proof here *)
+ it0:"iter r 0 x x" |
+ itS:"r x y \<Longrightarrow> iter r n y z \<Longrightarrow> iter r (Suc n) x z"
 
 text{*
 Correct and prove the following claim:
 *}
 
-lemma "star r x y \<Longrightarrow> iter r n x y"
-(* your definition/proof here *)
+lemma "star r x y \<Longrightarrow> \<exists> n. iter r n x y"
+  apply (induction rule: star.induct)
+  apply (auto intro: it0 itS)  
+  done 
 
 text{*
 \endexercise
