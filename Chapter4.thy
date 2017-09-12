@@ -79,13 +79,17 @@ as an inductive predicate
 *}
 
 inductive palindrome :: "'a list \<Rightarrow> bool" where
-(* your definition/proof here *)
+  "palindrome []" |
+  "palindrome xs \<Longrightarrow> palindrome (a#xs@[a])"
+
 
 text {* and prove *}
 
-lemma "palindrome xs \<Longrightarrow> rev xs = xs"
-(* your definition/proof here *)
-
+lemma "palindrome xs \<Longrightarrow> rev xs = xs" 
+  apply (induction rule: palindrome.induct)
+  apply simp_all
+  done 
+  
 text{*
 \endexercise
 
@@ -102,13 +106,16 @@ The single @{text r} step is performer after rather than before the @{text star'
 steps. Prove
 *}
 
-lemma "star' r x y \<Longrightarrow> star r x y"
-(* your definition/proof here *)
 
-
-
+lemma [simp]:"star' r y z \<Longrightarrow> r x y \<Longrightarrow> star' r x z"
+  apply (induction rule: star'.induct)
+  apply (auto intro: refl' step')  
+  done
+    
 lemma "star r x y \<Longrightarrow> star' r x y"
-(* your definition/proof here *)
+  apply (induction rule: star.induct)
+  apply (auto intro: refl')
+  done  
 
 text{*
 You may need lemmas. Note that rule induction fails
