@@ -171,19 +171,30 @@ Define them as inductive predicates and prove their equivalence:
 *}
 
 inductive S :: "alpha list \<Rightarrow> bool" where
-(* your definition/proof here *)
+  S0: "S []" |
+  S1: "S w \<Longrightarrow> S (a # w @ [b])"|
+  S2: "S w \<Longrightarrow> S x \<Longrightarrow> S (w @ x)"
 
 inductive T :: "alpha list \<Rightarrow> bool" where
-(* your definition/proof here *)
-
+  T0: "T []" |
+  T1: "T w \<Longrightarrow> T x \<Longrightarrow> T (w @ [a] @ x @ [b])"
+  
 lemma TS: "T w \<Longrightarrow> S w"
-(* your definition/proof here *)
+  apply (induction rule: T.induct)
+  apply (auto intro: S0 S1 S2)
+  done  
 
-
-
+lemma comm_T: "T w \<Longrightarrow> T x \<Longrightarrow> T (w @ x)"    
+  apply (induction rule: T.induct)
+   apply (simp add: T0)
+    (* still thinking*)
+    
 lemma ST: "S w \<Longrightarrow> T w"
-(* your definition/proof here *)
-
+  apply (induction rule: S.induct)
+  apply (simp add: T0)
+  (*still thinking*)
+  
+  
 corollary SeqT: "S w \<longleftrightarrow> T w"
 (* your definition/proof here *)
 
