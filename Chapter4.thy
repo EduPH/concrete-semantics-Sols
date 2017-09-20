@@ -184,20 +184,22 @@ lemma TS: "T w \<Longrightarrow> S w"
   apply (auto intro: S0 S1 S2)
   done  
 
-lemma comm_T: "T w \<Longrightarrow> T x \<Longrightarrow> T (w @ x)"    
+lemma comm_T: "T x \<Longrightarrow> T w \<Longrightarrow> T (w @ x)"    
   apply (induction rule: T.induct)
-   apply (simp add: T0)
-    (* still thinking*)
+  apply (simp)
+  apply (metis T1 append_assoc) 
+  done
     
 lemma ST: "S w \<Longrightarrow> T w"
   apply (induction rule: S.induct)
   apply (simp add: T0)
-  (*still thinking*)
-  
-  
+  apply (metis T0 T1 append_Cons append_Nil)
+  apply (auto intro: comm_T)
+  done
 corollary SeqT: "S w \<longleftrightarrow> T w"
-(* your definition/proof here *)
-
+  apply (auto simp add: TS ST)
+  done 
+    
 text{*
 \endexercise
 *}
